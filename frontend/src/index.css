@@ -59,8 +59,16 @@
 }
 
 @layer base {
-  body {
-    @apply font-body bg-background text-on-surface antialiased;
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #f8f9ff;
+    font-family: "Manrope", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -77,5 +85,13 @@
   
   .neon-glow-primary {
     box-shadow: 0 0 20px rgba(0, 105, 118, 0.2);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const doudizhuLogic = require('./doudizhuLogic');
+const paodekuaiLogic = require('./paodekuaiLogic');
 const db = require('./db');
 
 const app = express();
@@ -223,6 +224,104 @@ async function finishDoudizhuRound(io, room, game, winnerIndex) {
   }
 }
 
+function createPaodekuaiGame() {
+  const VALUES = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2"];
+  const SUITS = ["heart", "spade", "diamond", "club"];
+  const deck = [];
+  
+  for (const suit of SUITS) {
+    for (const value of VALUES) {
+      // 跑得快 48 张牌规则：去掉大小王、3个2 (保留心/块/梅/梅? 或者是去掉 2-heart, 2-club, 2-diamond, A-spade?)
+      // 常规规则：去掉大小王，三个2（留黑桃2），一个A（留黑桃A？不对，留三个A，去黑桃A）
+      // 这里采用简单规则：去掉大小王，2-heart, 2-club, 2-diamond, A-spade
+      if (value === '2' && suit !== 'spade') continue;
+      if (value === 'A' && suit === 'spade') continue;
+      deck.push({ id: `${suit}-${value}`, value, suit });
+    }
+  }
+  
+  const shuffled = shuffle(deck);
+  
+  // 查找黑桃3在哪家
+  const spade3Index = [0, 1, 2].find(i => 
+    shuffled.slice(i * 16, (i + 1) * 16).some(c => c.id === 'spade-3')
+  );
+
+  return {
+    hands: [
+      shuffled.slice(0, 16),
+      shuffled.slice(16, 32),
+      shuffled.slice(32, 48)
+    ],
+    currentPlayer: spade3Index || 0, // 黑桃3首发
+    status: 'playing',
+    lastPlay: null,
+    playedCards: [[], [], []],
+    turnDeadline: Date.now() + 15000
+  };
+}
+
+async function finishPaodekuaiRound(io, room, game, winnerIndex) {
+  // 跑得快结算：输家剩余牌数计分
+  const deltas = [0, 0, 0];
+  let totalWinnerGain = 0;
+
+  for (let i = 0; i < 3; i++) {
+    if (i === winnerIndex) continue;
+    const cardCount = game.hands[i].length;
+    // 如果一张没出（关全），翻倍？这里简单实现 1 张牌 1 分
+    const score = cardCount; 
+    deltas[i] = -score;
+    totalWinnerGain += score;
+  }
+  deltas[winnerIndex] = totalWinnerGain;
+
+  if (!room.sessionScores) room.sessionScores = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    const pid = room.players[i].id;
+    await db.updateUserScore(pid, deltas[i]);
+    room.sessionScores[i] += deltas[i];
+  }
+
+  room.completedRounds = (room.completedRounds || 0) + 1;
+  await db.recordMatch('paodekuai', room.players, room.players[winnerIndex].id);
+
+  const totalRounds = room.totalRounds || 3;
+  const matchComplete = room.completedRounds >= totalRounds;
+
+  io.to(room.id).emit('paodekuai-finished', {
+    winner: winnerIndex,
+    game,
+    roundScores: deltas,
+    sessionScores: [...room.sessionScores],
+    matchComplete,
+    room,
+    playerScores: room.players.map((p) => ({ id: p.id, score: users.get(p.id)?.score ?? 0 }))
+  });
+
+  if (!matchComplete) {
+    room.gameData = createPaodekuaiGame();
+    room.players.forEach((player, index) => {
+      const userData = users.get(player.id);
+      if (userData?.socketId) {
+        io.to(userData.socketId).emit('game-started', {
+          room,
+          hand: room.gameData.hands[index],
+          seat: index
+        });
+      }
+    });
+  } else {
+    room.status = 'waiting';
+    room.gameData = null;
+    if (gameTimers.has(room.id)) {
+      clearInterval(gameTimers.get(room.id));
+      gameTimers.delete(room.id);
+    }
+    io.to(room.id).emit('paodekuai-match-end', { room });
+  }
+}
+
 function createMahjongGame() {
   const tiles = shuffle(MAHJONG_TILES);
   return {
@@ -327,7 +426,7 @@ io.on('connection', (socket) => {
     }
 
     const totalRounds =
-      type === 'doudizhu' && [3, 6, 9, 12].includes(tr) ? tr : type === 'doudizhu' ? 3 : 1;
+      (type === 'doudizhu' || type === 'paodekuai') && [3, 6, 9, 12].includes(tr) ? tr : (type === 'doudizhu' || type === 'paodekuai') ? 3 : 1;
 
     const roomId = generateRoomId();
     const room = {
@@ -346,9 +445,9 @@ io.on('connection', (socket) => {
       gameData: null,
       totalRounds,
       completedRounds: 0,
-      sessionScores: type === 'doudizhu' ? [0, 0, 0] : null,
-      // 斗地主房默认私有：需要房主在准备页选择“公开房间”才会出现在大厅
-      isPublic: type === 'doudizhu' ? false : true
+      sessionScores: (type === 'doudizhu' || type === 'paodekuai') ? [0, 0, 0] : null,
+      // 扑克牌房默认私有：需要房主在准备页选择“公开房间”才会出现在大厅
+      isPublic: (type === 'doudizhu' || type === 'paodekuai') ? false : true
     };
 
     rooms.set(roomId, room);
@@ -504,7 +603,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (room.type === 'doudizhu') {
+    if (room.type === 'doudizhu' || room.type === 'paodekuai') {
       room.sessionScores = [0, 0, 0];
       room.completedRounds = 0;
     }
@@ -515,6 +614,8 @@ io.on('connection', (socket) => {
       room.gameData = createMahjongGame();
     } else if (room.type === 'doudizhu') {
       room.gameData = createDoudizhuGame();
+    } else if (room.type === 'paodekuai') {
+      room.gameData = createPaodekuaiGame();
     }
 
     // 通知所有玩家游戏开始
@@ -790,6 +891,68 @@ io.on('connection', (socket) => {
     }
 
     io.to(room.id).emit('doudizhu-played', {
+      player: playerIndex,
+      cards,
+      nextPlayer: game.currentPlayer,
+      game
+    });
+  });
+
+  // 跑得快：出牌机制
+  socket.on('paodekuai-play', async (data) => {
+    const { cards } = data; // [] 为不出
+    const user = users.get(currentUserId);
+    if (!user || !user.roomId) return;
+    const room = rooms.get(user.roomId);
+    if (!room || !room.gameData || room.type !== 'paodekuai') return;
+    
+    const game = room.gameData;
+    const playerIndex = room.players.findIndex(p => p.id === currentUserId);
+    
+    if (playerIndex !== game.currentPlayer || game.status !== 'playing') {
+      socket.emit('error', { message: '未轮到您出牌' });
+      return;
+    }
+
+    if (cards && cards.length > 0) {
+      // 验证牌型是否合法且比上一手大
+      if (!paodekuaiLogic.canPlay(cards, game.lastPlay)) {
+        socket.emit('error', { message: '牌型不合法或不够大' });
+        return;
+      }
+
+      const ids = cards.map(c => c.id);
+      game.hands[playerIndex] = game.hands[playerIndex].filter(c => !ids.includes(c.id));
+      game.lastPlay = { player: playerIndex, cards };
+    } else {
+      // 不出
+      if (!game.lastPlay) {
+        socket.emit('error', { message: '您必须起牌，不能跳过' });
+        return;
+      }
+      // 跑得快中如果是“有大必打”模式，这里需要校验玩家手中是否真的没牌可管
+      // 这里暂简化处理，允许点击不出，但可以在前端做提示
+    }
+
+    game.playedCards[playerIndex] = cards || [];
+
+    // 判胜
+    if (game.hands[playerIndex].length === 0) {
+      game.status = 'finished';
+      await finishPaodekuaiRound(io, room, game, playerIndex);
+      return;
+    }
+
+    // 轮流
+    game.currentPlayer = (game.currentPlayer + 1) % 3;
+    game.turnDeadline = Date.now() + 15000;
+
+    // 两家都不出，lastPlay清空
+    if ((!cards || cards.length === 0) && game.lastPlay && game.lastPlay.player === game.currentPlayer) {
+      game.lastPlay = null;
+    }
+
+    io.to(room.id).emit('paodekuai-played', {
       player: playerIndex,
       cards,
       nextPlayer: game.currentPlayer,

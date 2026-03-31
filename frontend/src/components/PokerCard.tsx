@@ -10,7 +10,7 @@ interface PokerCardProps {
   isSelected?: boolean;
   className?: string;
   onClick?: () => void;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 const PokerCard = memo(({ value, suit, isSelected, className, onClick, size = "md" }: PokerCardProps) => {
@@ -23,40 +23,49 @@ const PokerCard = memo(({ value, suit, isSelected, className, onClick, size = "m
     club: Club,
   }[suit];
 
+  /* 固定尺寸 — 基于 1280×720 设计稿 */
   const sizeClasses = {
+    xs: {
+      container: "w-[32px] h-[48px] p-[2px] rounded-md",
+      text: "text-[8px]",
+      icon: "w-[8px] h-[8px]",
+      centerIcon: "w-[16px] h-[16px]"
+    },
     sm: {
-      container: "w-16 h-24 p-1.5 rounded-lg",
-      text: "text-xs",
-      icon: "w-3 h-3",
-      centerIcon: "w-8 h-8"
+      container: "w-[48px] h-[72px] p-[4px] rounded-lg",
+      text: "text-[11px]",
+      icon: "w-[10px] h-[10px]",
+      centerIcon: "w-[22px] h-[22px]"
     },
     md: {
-      container: "w-24 h-36 p-2 rounded-xl",
-      text: "text-lg",
-      icon: "w-4 h-4",
-      centerIcon: "w-12 h-12"
+      container: "w-[72px] h-[108px] p-[6px] rounded-xl",
+      text: "text-[16px]",
+      icon: "w-[14px] h-[14px]",
+      centerIcon: "w-[36px] h-[36px]"
     },
     lg: {
-      container: "w-28 h-40 p-3 rounded-xl",
-      text: "text-2xl",
-      icon: "w-5 h-5",
-      centerIcon: "w-16 h-16"
+      container: "w-[88px] h-[132px] p-[8px] rounded-xl",
+      text: "text-[22px]",
+      icon: "w-[16px] h-[16px]",
+      centerIcon: "w-[48px] h-[48px]"
     },
     xl: {
-      container: "w-32 h-44 p-4 rounded-2xl",
-      text: "text-4xl",
-      icon: "w-6 h-6",
-      centerIcon: "w-20 h-20"
+      container: "w-[100px] h-[148px] p-[10px] rounded-xl",
+      text: "text-[26px]",
+      icon: "w-[18px] h-[18px]",
+      centerIcon: "w-[56px] h-[56px]"
     }
   }[size];
 
   return (
     <div 
       className={cn(
-        "poker-card bg-white flex flex-col shadow-lg cursor-pointer border border-outline-variant/20 transition-all duration-200",
+        "poker-card bg-white flex flex-col shadow-xl cursor-pointer border border-outline-variant/30 transition-all duration-300",
+        "bg-gradient-to-br from-white via-white to-slate-50",
         sizeClasses.container,
         isRed ? "text-error" : "text-on-surface",
-        isSelected && "ring-4 ring-primary border-primary/10 shadow-2xl scale-[1.02]",
+        isSelected && "ring-4 ring-primary ring-offset-2 border-primary/20 shadow-2xl scale-[1.05] z-50",
+        !isSelected && "hover:shadow-2xl hover:-translate-y-1 hover:border-primary/20",
         className
       )}
       onClick={onClick}

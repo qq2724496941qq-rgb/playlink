@@ -4,9 +4,10 @@ import Layout from "./components/Layout";
 import Lobby from "./components/Lobby";
 import DouDizhuArena from "./components/DouDizhuArena";
 import MahjongArena from "./components/MahjongArena";
+import PaodekuaiArena from "./components/PaodekuaiArena";
 import { motion, AnimatePresence } from "motion/react";
 
-type View = "lobby" | "doudizhu" | "mahjong" | "room";
+type View = "lobby" | "doudizhu" | "mahjong" | "paodekuai" | "room";
 
 // 用户类型
 interface User {
@@ -18,7 +19,7 @@ interface User {
 // 房间类型
 interface Room {
   id: string;
-  type: "mahjong" | "doudizhu";
+  type: "mahjong" | "doudizhu" | "paodekuai";
   status: "waiting" | "playing" | "finished";
   hostId: string;
   players: Player[];
@@ -49,10 +50,10 @@ export const SocketContext = React.createContext<{
 }>({
   socket: null,
   user: null,
-  setUser: () => {},
+  setUser: () => { },
   room: null,
-  setRoom: () => {},
-  goToLobby: () => {},
+  setRoom: () => { },
+  goToLobby: () => { },
 });
 
 export default function App() {
@@ -71,13 +72,13 @@ export default function App() {
           method: "POST",
         });
         const data = await res.json();
-        
+
         if (data.success) {
           setUser(data.user);
-          
+
           // 2. 连接 WebSocket
           const newSocket = io("http://localhost:3001");
-          
+
           newSocket.on("connect", () => {
             console.log("Connected to server");
             // 登录
@@ -138,7 +139,7 @@ export default function App() {
             if (data.game) setRoom(prev => prev ? ({ ...prev, gameData: data.game }) : prev);
           });
           newSocket.on("doudizhu-played", (data) => {
-             if (data.game) setRoom(prev => prev ? ({ ...prev, gameData: data.game }) : prev);
+            if (data.game) setRoom(prev => prev ? ({ ...prev, gameData: data.game }) : prev);
           });
           newSocket.on("doudizhu-finished", (data: any) => {
             if (data.room) setRoom(data.room);
@@ -157,7 +158,28 @@ export default function App() {
             setRoom(data.room);
             setCurrentView("room");
           });
-          
+
+          // 跑得快事件处理
+          newSocket.on("paodekuai-played", (data: any) => {
+            if (data.game) setRoom(prev => prev ? ({ ...prev, gameData: data.game }) : prev);
+          });
+          newSocket.on("paodekuai-finished", (data: any) => {
+            if (data.room) setRoom(data.room);
+            else if (data.game)
+              setRoom(prev => (prev ? { ...prev, gameData: data.game } : prev));
+            if (Array.isArray(data.playerScores)) {
+              setUser(prev => {
+                if (!prev) return prev;
+                const mine = data.playerScores.find((p: { id: string }) => p.id === prev.id);
+                return mine ? { ...prev, score: mine.score } : prev;
+              });
+            }
+          });
+          newSocket.on("paodekuai-match-end", (data: { room: Room }) => {
+            setRoom(data.room);
+            setCurrentView("room");
+          });
+
           // 强同步：完整覆盖gameData中的关键公共字段，保证所有端UI一致
           newSocket.on("game-sync", (data) => {
             setRoom(prev => {
@@ -226,7 +248,7 @@ export default function App() {
     switch (currentView) {
       case "lobby":
         return (
-          <Lobby 
+          <Lobby
             onSelectGame={(game) => {
               socket?.emit("create-room", { type: game });
             }}
@@ -238,8 +260,8 @@ export default function App() {
         );
       case "room":
         return (
-          <RoomView 
-            room={room!} 
+          <RoomView
+            room={room!}
             user={user!}
             socket={socket!}
             onLeave={() => {
@@ -253,17 +275,19 @@ export default function App() {
         return <DouDizhuArena />;
       case "mahjong":
         return <MahjongArena />;
+      case "paodekuai":
+        return <PaodekuaiArena />;
       default:
-        return <Lobby onSelectGame={(game) => {}} onJoinRoom={() => {}} />;
+        return <Lobby onSelectGame={(game) => { }} onJoinRoom={() => { }} />;
     }
   };
 
   if (isConnecting) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="w-[1280px] h-[720px] flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600">连接服务器中...</p>
+          <p className="text-slate-600 font-bold">连接服务器中...</p>
         </div>
       </div>
     );
@@ -271,7 +295,11 @@ export default function App() {
 
   return (
     <SocketContext.Provider value={{ socket, user, setUser, room, setRoom, goToLobby }}>
-      <Layout activeTab={currentView === "lobby" ? "lobby" : "games"} onTabChange={handleTabChange}>
+      <Layout
+        activeTab={currentView === "lobby" ? "lobby" : "games"}
+        onTabChange={handleTabChange}
+        hideHeader={["doudizhu", "mahjong", "paodekuai"].includes(currentView)}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
@@ -290,58 +318,57 @@ export default function App() {
 }
 
 // 房间等待界面
-function RoomView({ 
-  room, 
-  user, 
-  socket, 
-  onLeave 
-}: { 
-  room: Room; 
-  user: User; 
+function RoomView({
+  room,
+  user,
+  socket,
+  onLeave
+}: {
+  room: Room;
+  user: User;
   socket: Socket;
   onLeave: () => void;
 }) {
   const isHost = room.hostId === user.id;
   const me = room.players.find(p => p.id === user.id);
   const allReady = room.players.every(p => p.ready);
-  const needPlayers = room.type === "doudizhu" ? 3 : 2;
+  const needPlayers = room.type === "mahjong" ? 4 : 3;
   const canStart = isHost && room.players.length >= needPlayers && allReady;
 
   const DDZ_ROUND_OPTIONS = [3, 6, 9, 12] as const;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+    <div className="w-full h-full flex flex-col items-center justify-start pt-2 p-8 bg-slate-50">
+      <div className="bg-white rounded-3xl shadow-2xl p-10 w-[480px]">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-slate-800 mb-2">
-            {room.type === "mahjong" ? "麻将房间" : "斗地主房间"}
+            {room.type === "mahjong" ? "麻将房间" : room.type === "paodekuai" ? "跑得快房间" : "斗地主房间"}
           </h2>
           <p className="text-slate-500">房间号: {room.id}</p>
-          {room.type === "doudizhu" && room.totalRounds != null && (
+          {(room.type === "doudizhu" || room.type === "paodekuai") && room.totalRounds != null && (
             <p className="text-sm text-slate-500 mt-1">
               总局数：{room.totalRounds} 局（房间内所有局分数累加）
             </p>
           )}
         </div>
 
-        {room.type === "doudizhu" && isHost && room.status === "waiting" && (
+        {(room.type === "doudizhu" || room.type === "paodekuai") && isHost && room.status === "waiting" && (
           <div className="mb-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <p className="text-center text-sm font-black text-slate-700 mb-2">
                   选择本房间总局数
                 </p>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-3">
                   {DDZ_ROUND_OPTIONS.map((n) => (
                     <button
                       key={n}
                       type="button"
                       onClick={() => socket.emit("set-doudizhu-total-rounds", { totalRounds: n })}
-                      className={`py-3 rounded-xl font-bold text-sm transition-all ${
-                        room.totalRounds === n
+                      className={`py-4 rounded-2xl font-bold text-sm transition-all ${room.totalRounds === n
                           ? "bg-primary text-white shadow-md"
                           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
+                        }`}
                     >
                       {n} 局
                     </button>
@@ -352,11 +379,10 @@ function RoomView({
               <div className="w-32">
                 <p className="text-sm font-black text-slate-700 mb-2 text-center">公开房间</p>
                 <label
-                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border ${
-                    room.isPublic
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border ${room.isPublic
                       ? "bg-green-100 border-green-200 text-green-700"
                       : "bg-slate-100 border-slate-200 text-slate-600"
-                  }`}
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -372,11 +398,10 @@ function RoomView({
 
         <div className="space-y-3 mb-6">
           {room.players.map((player, index) => (
-            <div 
+            <div
               key={player.id}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                player.id === user.id ? "bg-primary/10 border border-primary/20" : "bg-slate-50"
-              }`}
+              className={`flex items-center justify-between p-3 rounded-lg ${player.id === user.id ? "bg-primary/10 border border-primary/20" : "bg-slate-50"
+                }`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-lg">
@@ -390,22 +415,21 @@ function RoomView({
                     )}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {room.type === "doudizhu" && room.sessionScores
+                    {(room.type === "doudizhu" || room.type === "paodekuai") && room.sessionScores
                       ? `本房累计: ${room.sessionScores[index] ?? 0}`
                       : `积分: ${player.score}`}
                   </p>
                 </div>
               </div>
-              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                player.ready 
-                  ? "bg-green-100 text-green-700" 
+              <div className={`px-3 py-1 rounded-full text-xs font-medium ${player.ready
+                  ? "bg-green-100 text-green-700"
                   : "bg-slate-100 text-slate-500"
-              }`}>
+                }`}>
                 {player.ready ? "已准备" : "未准备"}
               </div>
             </div>
           ))}
-          
+
           {/* 空位占位 */}
           {Array.from({ length: room.maxPlayers - room.players.length }).map((_, i) => (
             <div key={`empty-${i}`} className="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border border-dashed border-slate-200">
@@ -422,24 +446,22 @@ function RoomView({
         <div className="flex gap-3">
           <button
             onClick={() => socket.emit("ready", { ready: !me?.ready })}
-            className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-              me?.ready
+            className={`flex-1 py-3 rounded-lg font-medium transition-all ${me?.ready
                 ? "bg-slate-200 text-slate-700 hover:bg-slate-300"
                 : "bg-primary text-white hover:bg-primary/90"
-            }`}
+              }`}
           >
             {me?.ready ? "取消准备" : "准备"}
           </button>
-          
+
           {isHost && (
             <button
               onClick={() => socket.emit("start-game")}
               disabled={!canStart}
-              className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                canStart
+              className={`flex-1 py-3 rounded-lg font-medium transition-all ${canStart
                   ? "bg-green-500 text-white hover:bg-green-600"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed"
-              }`}
+                }`}
             >
               开始游戏
             </button>

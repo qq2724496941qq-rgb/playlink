@@ -11,7 +11,7 @@ interface RoomInfo {
 }
 
 interface LobbyProps {
-  onSelectGame: (game: "mahjong" | "doudizhu") => void;
+  onSelectGame: (game: "mahjong" | "doudizhu" | "paodekuai") => void;
   onJoinRoom: (roomId: string) => void;
 }
 
@@ -48,73 +48,73 @@ export default function Lobby({ onSelectGame, onJoinRoom }: LobbyProps) {
   };
 
   return (
-    <div className="flex-1 px-6 md:px-12 flex flex-col max-w-7xl mx-auto w-full py-12">
+    <div className="w-[1280px] h-[720px] px-12 pt-1 pb-10 flex flex-col overflow-y-auto no-scrollbar">
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-12 flex flex-col items-center text-center"
+        className="mb-8 flex flex-col items-center text-center"
       >
-        <h1 className="font-headline text-5xl md:text-6xl font-extrabold text-on-surface tracking-tighter mb-4">
-          开启你的<span className="text-primary">竞技之旅</span>
+        <h1 className="font-headline text-6xl font-extrabold text-on-surface tracking-tighter mb-4">
+          闲着也是闲着，<span className="text-primary">整两把？</span>
         </h1>
-        <p className="font-body text-on-surface-variant max-w-2xl text-lg font-medium">
-          体验极致流畅的卡牌与棋牌博弈，高精度视觉效果，与全球玩家同台竞技。
+        <p className="font-body text-on-surface-variant max-w-3xl text-xl font-medium">
+          经典的扑克麻将，随时随地拉上好友开一局。输赢不重要，开心最要紧。
         </p>
       </motion.section>
 
       {/* Game Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-2 gap-10 mb-12 shrink-0">
         {/* Dou Dizhu Card */}
-        <motion.div 
-          whileHover={{ scale: 1.01 }}
-          className="group relative overflow-hidden rounded-3xl bg-surface-container-high aspect-[16/10] flex flex-col justify-end p-8 transition-all duration-500 card-shadow cursor-pointer"
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="group relative overflow-hidden rounded-[32px] bg-surface-container-high aspect-[16/9] flex flex-col justify-end p-10 transition-all duration-500 card-shadow cursor-pointer"
           onClick={() => onSelectGame("doudizhu")}
         >
           <div className="absolute inset-0 z-0">
-            <img 
-              alt="斗地主" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+            <img
+              alt="斗地主"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               src="https://images.unsplash.com/photo-1511193311914-0346f16efe90?q=80&w=800&auto=format&fit=crop"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
           </div>
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded bg-primary text-white text-[10px] font-bold tracking-widest uppercase">3人</span>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-3 py-1 rounded-full bg-primary text-white text-xs font-black tracking-widest uppercase">3人对局</span>
             </div>
-            <h2 className="font-headline text-4xl font-bold text-white mb-2 tracking-tight">斗地主</h2>
-            <p className="font-body text-white/80 text-sm max-w-xs mb-4">经典三人扑克游戏，抢地主、出牌策略、配合队友。</p>
-            <button className="flex items-center gap-2 text-primary bg-white px-4 py-2 rounded-lg font-bold group-hover:gap-3 transition-all w-fit text-sm">
-              创建房间 <ArrowRight className="w-4 h-4" />
+            <h2 className="font-headline text-5xl font-bold text-white mb-3 tracking-tight">斗地主</h2>
+            <p className="font-body text-white/80 text-base max-w-md mb-6">经典三人扑克游戏，抢地主、出牌策略、配合队友。</p>
+            <button className="flex items-center gap-3 text-primary bg-white px-6 py-3 rounded-2xl font-black group-hover:gap-5 transition-all w-fit text-base">
+              创建房间 <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         </motion.div>
 
-        {/* Mahjong Card */}
-        <motion.div 
-          whileHover={{ scale: 1.01 }}
-          className="group relative overflow-hidden rounded-3xl bg-surface-container-high aspect-[16/10] flex flex-col justify-end p-8 transition-all duration-500 card-shadow cursor-pointer"
-          onClick={() => onSelectGame("mahjong")}
+        {/* Paodekuai Card */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="group relative overflow-hidden rounded-[32px] bg-surface-container-high aspect-[16/9] flex flex-col justify-end p-10 transition-all duration-500 card-shadow cursor-pointer"
+          onClick={() => onSelectGame("paodekuai")}
         >
           <div className="absolute inset-0 z-0">
-            <img 
-              alt="麻将" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-              src="https://images.unsplash.com/photo-1523875194681-bedd468c58bf?q=80&w=800&auto=format&fit=crop"
+            <img
+              alt="跑得快"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              src="https://images.unsplash.com/photo-1606167668584-78701c57f13d?q=80&w=800&auto=format&fit=crop"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
           </div>
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded bg-secondary text-white text-[10px] font-bold tracking-widest uppercase">4人</span>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-3 py-1 rounded-full bg-secondary text-white text-xs font-black tracking-widest uppercase">极速竞技</span>
             </div>
-            <h2 className="font-headline text-4xl font-bold text-white mb-2 tracking-tight">麻将</h2>
-            <p className="font-body text-white/80 text-sm max-w-xs mb-4">四人经典国粹，摸牌、吃碰杠胡，体验最纯正的乐趣。</p>
-            <button className="flex items-center gap-2 text-secondary bg-white px-4 py-2 rounded-lg font-bold group-hover:gap-3 transition-all w-fit text-sm">
-              创建房间 <ArrowRight className="w-4 h-4" />
+            <h2 className="font-headline text-5xl font-bold text-white mb-3 tracking-tight">跑得快</h2>
+            <p className="font-body text-white/80 text-base max-w-md mb-6">三人扑克竞速，先出完手牌者胜，无需叫地主，黑桃3先手。</p>
+            <button className="flex items-center gap-3 text-secondary bg-white px-6 py-3 rounded-2xl font-black group-hover:gap-5 transition-all w-fit text-base">
+              创建房间 <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         </motion.div>
@@ -122,36 +122,35 @@ export default function Lobby({ onSelectGame, onJoinRoom }: LobbyProps) {
 
       {/* Room List */}
       {rooms.length > 0 && (
-        <motion.section 
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-12 flex flex-col items-center w-full"
         >
-          <h3 className="text-xl font-bold text-slate-800 mb-6 text-center">可加入的房间</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+          <h3 className="text-2xl font-black text-slate-800 mb-8 text-center uppercase tracking-widest">可加入的房间</h3>
+          <div className="grid grid-cols-3 gap-8 w-full">
             {rooms.map((room) => (
-              <div 
+              <div
                 key={room.id}
                 onClick={() => onJoinRoom(room.id)}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+                className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 hover:shadow-2xl hover:border-primary/30 transition-all duration-300 cursor-pointer transform hover:-translate-y-2"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
-                    room.type === "mahjong" 
-                      ? "bg-secondary/10 text-secondary border border-secondary/20" 
+                <div className="flex items-center justify-between mb-4">
+                  <span className={`text-[11px] px-3 py-1.5 rounded-full font-black uppercase tracking-widest ${room.type === "paodekuai"
+                      ? "bg-secondary/10 text-secondary border border-secondary/20"
                       : "bg-primary/10 text-primary border border-primary/20"
-                  }`}>
-                    {room.type === "mahjong" ? "麻将博弈" : "斗地主竞技"}
+                    }`}>
+                    {room.type === "paodekuai" ? "跑得快" : "斗地主"}
                   </span>
-                  <div className="flex items-center gap-1.5 font-bold text-slate-400 text-xs">
-                     <User className="w-3 h-3" />
-                     <span>{room.playerCount}/{room.maxPlayers}</span>
+                  <div className="flex items-center gap-2 font-black text-slate-400 text-sm">
+                    <User className="w-4 h-4" />
+                    <span>{room.playerCount}/{room.maxPlayers}</span>
                   </div>
                 </div>
-                <p className="font-headline font-bold text-slate-800 text-lg uppercase tracking-tight">{room.hostName} 的对局</p>
-                <div className="flex items-center justify-between mt-4">
-                   <p className="text-[10px] text-slate-400 font-mono">ID: {room.id}</p>
-                   <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                <p className="font-headline font-black text-slate-800 text-xl uppercase tracking-tight mb-2">{room.hostName} 的对局</p>
+                <div className="flex items-center justify-between mt-6">
+                  <p className="text-xs text-slate-400 font-mono font-bold">ID: {room.id}</p>
+                  <ArrowRight className="w-5 h-5 text-primary" />
                 </div>
               </div>
             ))}
@@ -160,44 +159,43 @@ export default function Lobby({ onSelectGame, onJoinRoom }: LobbyProps) {
       )}
 
       {/* Call to Actions */}
-      <section className="flex flex-col md:flex-row gap-6 items-center justify-center max-w-4xl mx-auto w-full">
-        <button 
+      <section className="flex gap-8 items-center justify-center w-full mt-6 pb-4">
+        <button
           onClick={() => setShowJoinModal(true)}
-          className="w-full md:flex-1 py-6 bg-primary hover:opacity-90 text-white font-headline text-2xl font-bold rounded-xl transition-all duration-300 transform active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-4 group"
+          className="w-[400px] py-8 bg-primary hover:opacity-95 text-white font-headline text-3xl font-black rounded-[24px] transition-all duration-300 transform active:scale-95 shadow-2xl shadow-primary/30 flex items-center justify-center gap-5 group"
         >
-          <LogIn className="w-8 h-8 transition-transform group-hover:scale-110" />
+          <LogIn className="w-10 h-10 transition-transform group-hover:scale-110" />
           加入房间
         </button>
       </section>
 
-      {/* Join Room Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <motion.div 
+        <div className="fixed inset-0 flex items-center justify-center z-[9999]">
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-sm"
+            className="bg-white rounded-[32px] p-10 w-[450px] shadow-2xl border border-slate-200"
           >
-            <h3 className="text-xl font-bold text-slate-800 mb-4">加入房间</h3>
+            <h3 className="text-3xl font-black text-slate-800 mb-6">加入房间</h3>
             <input
               type="text"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
-              placeholder="输入房间号"
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-4"
+              placeholder="输入 6 位房间号"
+              className="w-full px-6 py-4 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary mb-8 text-xl font-bold"
             />
-            <div className="flex gap-3">
+            <div className="flex gap-5">
               <button
                 onClick={() => setShowJoinModal(false)}
-                className="flex-1 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-colors text-lg"
               >
                 取消
               </button>
               <button
                 onClick={handleJoin}
-                className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                className="flex-1 py-4 bg-primary text-white font-black rounded-2xl hover:bg-primary/95 transition-all text-lg shadow-xl shadow-primary/20"
               >
-                加入
+                加入对局
               </button>
             </div>
           </motion.div>
