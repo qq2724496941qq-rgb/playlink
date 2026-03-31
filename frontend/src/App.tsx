@@ -68,7 +68,8 @@ export default function App() {
     const init = async () => {
       try {
         // 1. 游客登录
-        const res = await fetch("http://localhost:3001/api/guest-login", {
+        const API_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
+        const res = await fetch(`${API_URL}/api/guest-login`, {
           method: "POST",
         });
         const data = await res.json();
@@ -77,7 +78,8 @@ export default function App() {
           setUser(data.user);
 
           // 2. 连接 WebSocket
-          const newSocket = io("http://localhost:3001");
+          const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
+          const newSocket = io(SERVER_URL);
 
           newSocket.on("connect", () => {
             console.log("Connected to server");

@@ -22,9 +22,10 @@ export default function Lobby({ onSelectGame, onJoinRoom }: LobbyProps) {
 
   // 获取房间列表
   useEffect(() => {
+    const API_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
     const fetchRooms = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/rooms");
+        const res = await fetch(`${API_URL}/api/rooms`);
         const data = await res.json();
         if (data.success) {
           setRooms(data.rooms);
